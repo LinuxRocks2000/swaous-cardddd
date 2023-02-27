@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+
+
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>SWAOUS CARDDDDDDDDD</title>
+    </head>
+    <body>
+        <div id="form">
+            Card name: <input id="cardname" type="text"/><br>
+            Card union: <br><select id="union">
+                <option>Warriors of the Great Fawn</option>
+                <option>Circus Bariun</option>
+                <option>Brothers of the apocalypse</option>
+                <option>Gov't of Yunga</option>
+                <!-- Jakie: you'll finna hafta add the rest of 'em, I were a bit too lazy -->
+            </select><br>
+            Card type: <select id="type"><option>Automatic</option><option>Semiautomatic</option><option>Manual</option></select><br>
+            Card description: <br><textarea id="description"></textarea><br>
+            Turns (ctrl+click to select one without clearing previous selections):<br> <select id="turns" multiple></select><br>
+            Health (Manual only): <input type="number" id="health"/><br>
+            Damage: <input type="number" id="damage" /><br>
+        </div>
+        <button onclick="alert(save())">Generate card URL</button><br>
+        <button onclick="render()">Render</button><br>
+        <canvas id="card" width = "0" height = "0"></canvas>
+        <script>
+            var d = document.getElementById("turns");
+
+            for (var x = 1; x <= 10; x++) {
+                d.innerHTML += "<option>" + x + "</option>";
+            }
+            const readFields = (fieldstring) => {
+                var ret = [];
+                var len = -1;
+                var cVal = "";
+                var cLen = 0;
+                for (var x = 1; x < fieldstring.length; x ++){ // x=1 to skip the initial #
+                    if (len > 0){
+                        cVal += fieldstring[x];
+                        cLen ++;
+                        if (cLen == len){
+                            ret.push(decodeURIComponent(cVal));
+                            cVal = 0;
+                            len = -1;
+                            cLen = 0;
+                        }
+                    }
+                    else{
+                        if (fieldstring[x] == ":"){
+                            len = cVal - 0;
+                            if (len == 0){
+                                ret.push("");
+                            }
+                            cVal = "";
+                        }
+                        else{
+                            cVal += fieldstring[x];
+                        }
+                    }
+                }
+                return ret;
+            };
+            if (window.location.hash){
+                var f = readFields(window.location.hash);
+                var d = document.getElementById("form");
+                for (var x = 0; x < d.children.length; x ++){
+                    console.log(x, f[x]);
+                    if ((d.children[x].tagName == "INPUT") || (d.children[x].tagName == "TEXTAREA")){
+                        d.children[x].value = f[x];
+                    }
+                    else {
+                        var thang = f[x].split(",");
+                        for (var i = 0; i < d.children[x].children.length; i ++){
+                            d.children[x].children[i].selected = thang[i] == "true";
+                        }
+                    }
+                }
+            }
+            const appendField = (url, fieldcontent) => {
+                var strContent = encodeURIComponent(fieldcontent + "");
+                return url + strContent.length + ":" + strContent;
+            }
+            const save = () => {
+                var url = location.protocol + '//' + // THANKS, STACKOVERFLOW
+                    location.host +
+                    location.pathname +
+                    (location.search ? location.search : "");
+                url += "#";
+                Array.from(document.getElementById("form").children).forEach(item => {
+                    var v = "";
+                    if (item.value){
+                        v = item.value;
+                    }
+                    if (item.children.length){
+                        v = "";
+                        for (var x = 0; x < item.children.length; x ++){
+                            v += (item.children[x].selected ? true : false) + ",";
+                        }
+                    }
+                    url = appendField(url, v);
+                });
+                return url;
+            };
+
+            function checkAndDraw(ctx, text, x, y) { // THANKS, ANIMUS CARDDDDDDDDDDD
+                ctx.fillText(text, x, y);
+            }
+
+            function checkAndDrawBlock(ctx, text, x, y, width, fontHeight = 12) {
+                var words = text.split(" ");
+                var line = "";
+                var yOffset = 0;
+                words.forEach((item, i) => {
+                    if (ctx.measureText(line + " " + item).width > width - 30) {
+                        checkAndDraw(ctx, line, x, y + yOffset);
+                        line = item;
+                        yOffset += fontHeight;
+                    }
+                    else {
+                        if (i > 0) {
+                            line += " " + item;
+                        }
+                        else {
+                            line = item;
+                        }
+                    }
+                });
+                checkAndDraw(ctx, line, x, y + yOffset);
+            }
+
+            const render = () => {
+                const width = 300;
+                const height = 450;
+                const name = document.getElementById("cardname").value;
+                const union = document.getElementById("union").value;
+                const type = "<< " + document.getElementById("type").value + " >>";
+                const stats = (document.getElementById("health").value || "") + "-" + document.getElementById("damage").value;
+                var d = document.getElementById("turns");
+                var turns = "Turns: ";
+                for (var x = 0; x < d.children.length; x ++){
+                    if (d.children[x].selected){
+                        turns += d.children[x].innerText + ", ";
+                    }
+                }
+                turns = turns.substr(0, turns.length - 2);
+                var cv = document.getElementById("card");
+                cv.width = width;
+                cv.height = height;
+                var ctx = cv.getContext("2d");
+                ctx.fillStyle = "#aa7733";
+                ctx.fillRect(0, 0, 1000, 1000);
+                ctx.fillStyle = "black";
+                ctx.font = "40px monospace";
+                ctx.fillText(name, width/2 - ctx.measureText(name).width/2, 40);
+                ctx.font = "bold 12px serif";
+                ctx.fillStyle = "lightgreen";
+                ctx.fillText("Union: " + union, 10, 80);
+                if (type == "<< Automatic >>"){
+                    ctx.fillStyle = "red";
+                }
+                else if (type == "<< Semiautomatic >>"){
+                    ctx.fillStyle = "green";
+                }
+                else{
+                    ctx.fillStyle = "blue";
+                }
+                ctx.font = "18px sans-serif";
+                ctx.fillText(type, width/2 - ctx.measureText(type).width/2, 100);
+                ctx.font = "12px monospace";
+                ctx.fillStyle = "black";
+                ctx.fillText(turns, 10, 120);
+                ctx.textAlign = "right";
+                ctx.font = "italic 18px serif";
+                ctx.fillText(stats, width - 10, height - 10);
+                ctx.textAlign = "left";
+                checkAndDrawBlock(ctx, document.getElementById("description").value, 25, 140, 250, 18);
+            };
+        </script>
+    </body>
+</html>
